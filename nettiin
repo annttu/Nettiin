@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script is licensed under MIT-license.
+# - Antti 'Annttu' Jaakkola
+
 # CONFIG #
 # PATHS without tailin slash
 #PIVATE_DIR='private/path/to/dir/'
@@ -9,63 +12,77 @@ PUBLIC_DIR='t'
 DOMAIN='annttu.fi'
 
 ##################
+# Some functions #
 ##################
-##################
-# Some functions
 
-chr() {
-  num=$1
-  [ $1 -gt 90 ] && [ $1 -lt 97 ] && num=$(($1+7))
-  printf \\$(printf '%03o' $num)
+function help
+{
+	echo "Usage: $0 [-n] [-q] <file> [<name>]"
+	echo ""
+	echo "-n         don't rename file"
+	echo "-q         quiet"
+	echo "-h         help"
+	exit 0
 }
 
-rd() {
-  b=`echo $RANDOM |cut -c 1-2`
-  [ $b -gt 20 ] && return 0
-  return 1
-}
+RENAME=true
+QUIET=0
 
 if [ "$1" == "-q" ]
 then
 	QUIET=1
-	FILE="$2"
+	shift
+elif [ "$1" == "-n" ]
+then
+	# don't rename
+	RENAME=false
+	shift
+elif [ "$1" == "-h" ]
+then
+	help
+fi
+FILE="$1"
+[ "$FILE" == "" ] && help
+if [ "$2" != "" ]
+then
+	OUTFILE="$2"
+elif [ "$RENAME" = "false" ]
+then
+	OUTFILE="`basename $FILE`"
 else
-	QUIET=0
-	FILE="$1"
+	SUFFIX="`echo $FILE |sed -e 's/.*\.//'`"
+	# create short pseudo random string
+	AA=''
+	for i in `date +"%H %m %d %y %S %M"`
+	do
+		if `rd`
+		then
+			let "i=10#$i"
+			b=$(($i+65))
+			b="`chr $b`"
+			AA="${AA}${b}"
+		else
+			let "i=10#$i"
+			AA="${AA}$((i/10))"
+		fi
+	done
+	b=`echo $RANDOM |cut -c 1-2`
+	[ $b -gt 122 ] && b=$(($b / 122))
+	[ $b -lt 64 ] && b=$(($b+64))
+	b=`chr $b`
+	AA=${AA}${b}
+	OUTFILE=${AA}.${SUFFIX}
+	#echo $AA
 fi
 
-SUFFIX="`echo $FILE |sed -e 's/.*\.//'`"
-
-# create short pseudo random string
-AA=''
-for i in `date +"%H %m %d %y %S %M"`
-do
-	if `rd`
-	then
-		let "i=10#$i"
-		b=$(($i+65))
-		b="`chr $b`"
-		AA="${AA}${b}"
-	else
-		let "i=10#$i"
-		AA="${AA}$((i/10))"
-	fi
-done
-b=`echo $RANDOM |cut -c 1-2`
-[ $b -gt 122 ] && b=$(($b / 122))
-[ $b -lt 64 ] && b=$(($b+64))
-b=`chr $b`
-AA=${AA}${b}
-#echo $AA
-
-scp "$FILE" $DOMAIN:$PRIVATE_DIR/${AA}.${SUFFIX} #> /dev/null 2> /dev/null
+scp "$FILE" $DOMAIN:$PRIVATE_DIR/${OUTFILE} #> /dev/null 2> /dev/null
 if [ "$?" == "0" ]
 then
 	if [ "$QUIET" == "0" ]
 	then
-		echo -e "\n# GOTO:\thttp://$DOMAIN/$PUBLIC_DIR/${AA}.${SUFFIX}\n"
+		echo -e "\n# GOTO:\thttp://$DOMAIN/$PUBLIC_DIR/${OUTFILE}\n"
 	else
-		echo "http://$DOMAIN/$PUBLIC_DIR/${AA}.${SUFFIX}"
+		echo "http://$DOMAIN/$PUBLIC_DIR/${OUTFILE}"
 	fi
 else
 	if [ "$QUIET" == "0" ]
