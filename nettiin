@@ -25,6 +25,18 @@ function help
 	exit 0
 }
 
+rd() {
+  b=`echo $RANDOM |cut -c 1-2`
+  [ $b -gt 20 ] && return 0
+  return 1
+}
+
+chr() {
+  num=$1
+  [ $1 -gt 90 ] && [ $1 -lt 97 ] && num=$(($1+7))
+  printf \\$(printf '%03o' $num)
+}
+
 RENAME=true
 QUIET=0
 
@@ -69,13 +81,12 @@ else
 	b=`echo $RANDOM |cut -c 1-2`
 	[ $b -gt 122 ] && b=$(($b / 122))
 	[ $b -lt 64 ] && b=$(($b+64))
-	b=`chr $b`
-	AA=${AA}${b}
-	OUTFILE=${AA}.${SUFFIX}
-	#echo $AA
+	b="`chr $b`"
+	AA="${AA}${b}"
+	OUTFILE="${AA}.${SUFFIX}"
 fi
 
-scp "$FILE" $DOMAIN:$PRIVATE_DIR/${OUTFILE} #> /dev/null 2> /dev/null
+scp "$FILE" $DOMAIN:$PRIVATE_DIR/${OUTFILE} > /dev/null
 if [ "$?" == "0" ]
 then
 	if [ "$QUIET" == "0" ]
